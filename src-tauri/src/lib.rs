@@ -1,6 +1,7 @@
 #![cfg_attr(mobile, tauri::mobile_entry_point)]
 
 use std::sync::Arc;
+use tauri::{Emitter, Manager};
 use crate::state::AppState;
 
 pub mod commands;
@@ -26,7 +27,7 @@ pub fn run() {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if !llm::local::check_model_cache(&state).await {
-                    llm::local::start_download(app_handle, state).await;
+                    llm::local::start_download(app_handle, state);
                 } else {
                     state.set_status(crate::state::ModelStatus::Ready);
                     app_handle.emit("model_ready", ()).ok();

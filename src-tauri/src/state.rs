@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]

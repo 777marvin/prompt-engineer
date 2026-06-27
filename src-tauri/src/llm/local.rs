@@ -1,7 +1,6 @@
 use crate::error::AppError;
 use crate::state::AppState;
 use serde::Serialize;
-use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
@@ -36,7 +35,7 @@ async fn download_model(app_handle: AppHandle, state: Arc<AppState>) -> Result<(
     }
 
     let client = reqwest::Client::new();
-    let response = client
+    let mut response = client
         .get(MODEL_URL)
         .send()
         .await
@@ -53,12 +52,11 @@ async fn download_model(app_handle: AppHandle, state: Arc<AppState>) -> Result<(
         .map_err(|e| AppError::DownloadFailed(format!("file create: {}", e)))?;
 
     let mut downloaded: u64 = 0;
-    let mut stream = response.bytes_stream();
-    use futures_util::StreamExt;
-    while let Some(chunk_result) = stream.next().await {
-        let chunk = chunk_result.map_err(|e| {
-            AppError::DownloadFailed(format!("stream error: {}", e))
-        })?;
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| AppError::DownloadFailed(format!("stream error: {}", e)))?
+    {
         let chunk_len = chunk.len() as u64;
         downloaded += chunk_len;
         state

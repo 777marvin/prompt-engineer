@@ -32,11 +32,6 @@ impl AppError {
     }
 }
 
-impl From<AppError> for tauri::ipc::InvokeError {
-    fn from(err: AppError) -> Self {
-        tauri::ipc::InvokeError::from(err.to_string())
-    }
-}
 
 #[cfg(test)]
 mod tests {
