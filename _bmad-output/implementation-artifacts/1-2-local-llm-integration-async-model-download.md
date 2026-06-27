@@ -198,3 +198,224 @@ So that the app works fully offline afterward without me needing to understand m
   - When status is `error`: button disabled, text "Download failed"
   - When status is `ready`: button enabled, gradient active, text "Discover Your Prompt"
 - [ ] 7.2 Verify DemoPromptBanner remains fully interactive during all download states (FR3)
+
+---
+
+## Dev Notes
+
+### Architecture Guardrails
+
+#### Naming Conventions
+
+| Layer | Convention | Example |
+|-------|-----------|---------|
+| Rust modules/types | snake_case | local.rs, llm_router, AppError |
+| Rust structs/enums | PascalCase | LlmState, ModelStatus |
+| Tauri commands | snake_case | get_model_status, retry_model_download |
+| Tauri events | snake_case, entity_event pattern | llm_progress, model_ready, model_error |
+| React components | PascalCase | ProgressIndicator |
+| Zustand stores | use prefix + Store suffix | useModelStore.ts |
+
+#### Tauri IPC Patterns
+
+- Commands return Result<T, AppError> — never panic or return raw strings
+- Events use entity_event pattern — llm_progress, model_ready, model_error
+- Event payloads are flat objects with snake_case keys
+- Frontend listeners set up in useEffect with cleanup via unlisten()
+
+#### Model Download Architecture
+
+- Model stored at: {app_data_dir}/models/ (resolved via tauri::api::path::app_data_dir())
+- Model file: llama-3.2-1b-instruct-q4_k_m.gguf (name TBD from Hugging Face)
+- Async download via reqwest::Client::get().send() with .bytes_stream()
+- Progress emitted from Rust via app_handle.emit("llm_progress", payload)
+- Download state persisted in useModelStore (already created in Story 1.1)
+
+#### Cross-Store Coordination
+
+- useModelStore is the sole source of truth for download/model state
+- FastRefineView reads useModelStore.status to enable/disable CTA button
+- ProgressIndicator reads useModelStore for display state
+- App.tsx orchestrates event listeners and dispatches to useModelStore
+- No store imports another store — coordination in components/hooks only
+
+### Files to CREATE (This Story)
+
+```
+src-tauri/src/
+├── error.rs                    # AppError enum
+├── state.rs                    # Tauri managed state (LlmState, AppState)
+├── llm/
+│   ├── mod.rs                  # Module declaration
+│   ├── local.rs                # Model download + llama-cpp-2 wrapper
+│   └── router.rs               # LLM Router (local mode for this story)
+└── commands/
+    ├── mod.rs                  # Module declaration
+    └── refine.rs               # get_model_status command
+
+src/components/progress/
+├── ProgressIndicator.tsx       # Download progress bar component
+└── ProgressIndicator.test.tsx  # Tests for all states
+
+src/hooks/
+└── useModelDownload.ts         # Tauri event listener hook (optional)
+```
+
+### Files to MODIFY (This Story)
+
+```
+src-tauri/
+├── Cargo.toml                  # Add llama-cpp-2, reqwest dependencies
+├── src/lib.rs                  # Register llm, commands, error modules; register state, commands, events
+├── src/main.rs                 # May need plugin registration
+└── capabilities/default.json   # Verify event permissions
+
+src/
+├── App.tsx                     # Add model download lifecycle (event listeners, init check)
+├── stores/useModelStore.ts     # Already created in Story 1.1 — update if any missing actions
+└── components/FastRefineView.tsx # Wire CTA button to model status
+```
+
+---
+
+## Architecture Compliance
+
+### Technical Stack (This Story)
+
+| Layer | Technology | Version | Rationale |
+|-------|-----------|---------|-----------|
+| LLM Inference | llama-cpp-2 | 0.1.x | Rust bindings for llama.cpp, up-to-date with upstream |
+| HTTP Client | reqwest | 0.12.x | Streaming responses for async download, Tokio-native |
+| Async Runtime | Tokio | 1.x | Provided by Tauri, used for async download tasks |
+| Serialization | serde + serde_json | 1.x | Tauri IPC serialization, event payloads |
+| State Management | Zustand (useModelStore) | v5 | Already created in Story 1.1, download progress state |
+| UI | ProgressIndicator | Custom | ARIA-compliant, Framer Motion animations |
+
+### IPC Architecture
+
+Commands:
+- get_model_status: returns { status: string, progress: number, error: string | null }
+- retry_model_download: returns { success: boolean }
+
+Events:
+- llm_progress: { downloadedBytes: number, totalBytes: number } — Rust to Frontend
+- model_ready: {} — Rust to Frontend
+- model_error: { error: string } — Rust to Frontend
+
+---
+
+## Library and Framework Requirements
+
+### llama-cpp-2 Integration
+
+- Crate: llama-cpp-2, version 0.1.x (latest stable 0.1.150)
+- Source: crates.io/crates/llama-cpp-2
+- Docs: docs.rs/llama-cpp-2/0.1.150
+- Build requirement: CMake >= 3.20, C++ build tools
+- Model: Llama 3.2 1B Instruct, GGUF format, Q4_K_M quantization (~1.2 GB)
+- Model source: Hugging Face — bartowski/Llama-3.2-1B-Instruct-GGUF or equivalent
+
+### reqwest Integration
+
+- Features needed: stream feature
+- Usage: reqwest::Client::get(url).send().await then response.bytes_stream()
+- Download approach: Stream chunks, write to file, emit progress events
+
+### Cargo.toml Dependencies to Add
+
+```
+llama-cpp-2 = "0.1"
+reqwest = { version = "0.12", features = ["stream"] }
+```
+
+---
+
+## Testing Requirements
+
+### Minimum Test Cases
+
+Rust Unit Tests (inline in source files):
+- error.rs: Test AppError serialization to JSON with correct code/message
+- state.rs: Test LlmState default initialization
+- commands/refine.rs: Test get_model_status response structure
+
+Component Tests:
+- ProgressIndicator.test.tsx: Test rendering in downloading, ready, error states
+- ProgressIndicator.test.tsx: Test ARIA attributes (role=progressbar, aria-valuenow etc.)
+- ProgressIndicator.test.tsx: Test retry button fires onRetry callback
+
+### Test Commands
+
+```
+cargo test                    # Run ALL Rust tests
+pnpm test                     # Run TypeScript tests (vitest run)
+```
+
+---
+
+## Previous Story Intelligence
+
+### Story 1.1 — Project Foundation and Welcome Screen (COMPLETED)
+
+Key existing state:
+1. Project scaffolded with create-tauri-app — React 18 + TypeScript + Vite + Tauri v2
+2. Tailwind CSS v4 with all design tokens defined in globals.css
+3. 5 Zustand stores created: useAppStore, usePromptStore, useModelStore, useSkillTreeStore, useSettingsStore
+4. useModelStore already has: status, downloadedBytes, totalBytes, error, setProgress, setStatus, setError, reset
+5. Framer Motion configured with AnimatePresence in App.tsx
+6. App.tsx already has Tauri event listener scaffolding for llm_progress, model_ready, model_error
+7. FastRefineView.tsx already has disabled CTA button with "Preparing AI..." text
+8. src/lib/tauri.ts already has typed wrapper: getModelStatus()
+9. src/lib/types.ts already has AppError interface with LLM_NOT_READY, LLM_INFERENCE_FAILED codes
+10. No Rust backend commands exist yet — this story creates the first ones
+
+---
+
+## Git Intelligence Summary
+
+Recent commits:
+- 365f8a3: "feat: implement Phase 1-1 project foundation and welcome screen" — Created all 5 Zustand stores, welcome UI, event listeners, FastRefineView with disabled CTA (47 files, 6246 lines)
+- e1e1ebf: "chore: initial commit - BMAD planning artifacts" — Planning artifacts
+
+---
+
+## Story Completion Status
+
+### Definition of Done
+
+- [ ] All Rust backend files created: llm/, commands/, error.rs, state.rs
+- [ ] llama-cpp-2 and reqwest dependencies added to Cargo.toml, cargo build succeeds
+- [ ] Model download logic in local.rs working: async download, progress events, caching, retry
+- [ ] ProgressIndicator.tsx renders correctly in all 4 states (idle, downloading, ready, error)
+- [ ] ProgressIndicator uses Framer Motion for smooth animations
+- [ ] ProgressIndicator has role="progressbar" with proper ARIA attributes
+- [ ] CTA button in FastRefineView reacts to model status (disabled/enabled, text changes)
+- [ ] Demo prompt remains interactive during download (FR3)
+- [ ] model_ready event transitions store to "ready" status, button becomes active
+- [ ] Model loads from cache on subsequent launches without re-downloading
+- [ ] Download failure shows red bar with retry button, retry works
+- [ ] All event listeners set up in App.tsx with proper cleanup
+- [ ] All Tauri commands return Result<T, AppError>
+- [ ] Minimum 11 tests passing (3 Rust + 3 component + 3 store + 2 integration)
+- [ ] cargo test and pnpm test both pass
+- [ ] No raw hex colors — all CSS references design tokens
+- [ ] File structure matches architecture document
+
+### Out of Scope (Future Stories)
+
+- Fast Refine inference, LLM Router routing — Story 1.3
+- Connectivity detection — Story 1.4
+- Prompt Dissector — Story 1.5
+- Before/After Diff — Story 1.6
+- All Epics 2-7 features
+- Cloud API integration — this story is local-only
+
+### Post-Completion Validation
+
+```
+cargo build
+cargo test
+pnpm lint
+pnpm test
+pnpm tauri dev
+```
