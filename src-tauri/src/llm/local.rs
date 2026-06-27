@@ -274,13 +274,13 @@ pub fn parse_llm_output(raw_output: &str, original_input: &str) -> RefineResult 
         "**Task:** {}\n\n**Context:** (no additional context detected)",
         original_input
     );
-
+    let refined_clone = refined.clone();
     RefineResult {
         original: original_input.to_string(),
         refined,
         changes: vec![RefineChange {
             change_type: "modified".to_string(),
-            text: refined.clone(),
+            text: refined_clone,
             reason: "Applied basic structure (LLM output was not parseable)".to_string(),
         }],
     }
