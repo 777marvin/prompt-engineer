@@ -3,6 +3,12 @@
 _bmad/
 .agents/
 
+# ---- CodeGraph (Tooling) ----
+.codegraph/
+
+# ---- Playwright MCP (Test-Logs) ----
+.playwright-mcp/
+
 # ---- Secrets ----
 .env
 .env.*
