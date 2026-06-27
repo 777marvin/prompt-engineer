@@ -172,7 +172,7 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
     ).map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
 
     // Create context
-    let ctx = model.new_context(
+    let mut ctx = model.new_context(
         backend,
         LlamaContextParams::default()
             .with_n_ctx(std::num::NonZero::new(2048))
@@ -205,7 +205,6 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
     let mut n_cur = n_tokens;
 
     while n_cur - n_tokens < n_predict {
-        let candidates = ctx.token_data_array();
         let mut sampler = LlamaSampler::greedy();
         let new_token_id = sampler.sample(&ctx, (n_cur - 1) as i32);
 
