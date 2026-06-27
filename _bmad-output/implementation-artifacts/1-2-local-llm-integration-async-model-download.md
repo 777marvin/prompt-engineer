@@ -16,51 +16,6 @@ This story file is the **exhaustive implementation guide** for the LLM developer
 
 **What this story delivers:** The Rust backend comes alive. `llama-cpp-2` is integrated for local LLM inference. The Llama 3.2 1B model downloads asynchronously on first launch with a polished progress UI. The `model_ready` event bridges Rust to the frontend, unlocking the Fast Refine button. All future stories depend on this one — it's the **first backend story** and the **critical path blocker** for Epic 1.
 
-## Story
-
-As a {{role}},
-I want {{action}},
-so that {{benefit}}.
-
-## Acceptance Criteria
-
-1. [Add acceptance criteria from epics/PRD]
-
-## Tasks / Subtasks
-
-- [ ] Task 1 (AC: #)
-  - [ ] Subtask 1.1
-- [ ] Task 2 (AC: #)
-  - [ ] Subtask 2.1
-
-## Dev Notes
-
-- Relevant architecture patterns and constraints
-- Source tree components to touch
-- Testing standards summary
-
-### Project Structure Notes
-
-- Alignment with unified project structure (paths, modules, naming)
-- Detected conflicts or variances (with rationale)
-
-### References
-
-- Cite all technical details with source paths and sections, e.g. [Source: docs/<file>.md#Section]
-
-## Dev Agent Record
-
-### Agent Model Used
-
-{{agent_model_name_version}}
-
-### Debug Log References
-
-### Completion Notes List
-
-### File List
-
----
 
 ## 🎯 Story
 
