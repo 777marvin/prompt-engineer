@@ -236,7 +236,7 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
     Ok(output)
 }
 
-pub fn parse_llm_output(raw_output: &str, original_input: &str) -> crate::commands::refine::RefineResult {
+pub fn parse_llm_output(raw_output: &str, original_input: &str) -> RefineResult {
     // Try to parse as JSON first
     if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw_output.trim()) {
         let role = parsed.get("role").and_then(|v| v.as_str()).unwrap_or("");
@@ -249,13 +249,13 @@ pub fn parse_llm_output(raw_output: &str, original_input: &str) -> crate::comman
             role, task, format, context
         );
 
-        let changes = vec![crate::commands::refine::RefineChange {
+        let changes = vec![RefineChange {
             change_type: "modified".to_string(),
             text: refined.clone(),
             reason: "Restructured raw input into Role/Task/Format/Context components".to_string(),
         }];
 
-        return crate::commands::refine::RefineResult {
+        return RefineResult {
             original: original_input.to_string(),
             refined,
             changes,
@@ -268,10 +268,10 @@ pub fn parse_llm_output(raw_output: &str, original_input: &str) -> crate::comman
         original_input
     );
 
-    crate::commands::refine::RefineResult {
+    RefineResult {
         original: original_input.to_string(),
         refined,
-        changes: vec![crate::commands::refine::RefineChange {
+        changes: vec![RefineChange {
             change_type: "modified".to_string(),
             text: refined.clone(),
             reason: "Applied basic structure (LLM output was not parseable)".to_string(),
