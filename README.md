@@ -1,8 +1,8 @@
 # Prompt Engineer
 
-> **⚠️ Status: Early development.** The scaffold and welcome screen are built
-> (Epic 1, Story 1.1). Everything below describes the intended product — most of
-> it is not implemented yet. See the roadmap.
+> **⚠️ Status: Early development.** The scaffold, welcome screen (Story 1.1), and
+> local LLM integration with async model download (Story 1.2) are built. Most
+> features below are not implemented yet. See the roadmap.
 
 A local, offline desktop app for practicing prompt engineering — built with
 **Tauri v2**, **React 18**, and **TypeScript**, no account required.
@@ -30,7 +30,7 @@ tokens, Zustand stores, theme toggle, welcome screen, test setup (Vitest + RTL).
 
 <img src="docs/screenshots/welcome.png" width="700" alt="Welcome screen (early development)">
 
-**Next:** local-LLM integration → Fast Refine engine → Prompt Dissector.
+**Next:** Fast Refine engine → Prompt Dissector → application shell.
 
 **Backlog:** Master Mode, application shell, LLM adapters, gamification,
 NLP domain detection, distribution.
@@ -45,7 +45,7 @@ Full epic/story breakdown: [`_bmad-output/planning-artifacts/epics.md`](./_bmad-
 | Styling   | Tailwind v4, Framer Motion           | —                                |
 | State     | Zustand                              | —                                |
 | Testing   | Vitest + React Testing Library       | cargo test (Rust)                |
-| Local LLM | —                                    | llama-cpp-rs, Llama 3.2 1B       |
+| Local LLM | llama-cpp-rs, Llama 3.2 1B          | —                                |
 | NLP       | —                                    | Python sidecar (spaCy), JSON-RPC |
 | Storage   | —                                    | SQLite, OS keychain (stronghold) |
 | CI/CD     | —                                    | GitHub Actions, auto-update      |
