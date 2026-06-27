@@ -1,0 +1,38 @@
+# ---- Aider & BMAD (Tooling) ----
+.aider*
+_bmad/
+.agents/
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- OS-Dateien (Windows / macOS / Linux) ----
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# ---- Rust (Tauri Backend) ----
+target/
+*.pdb
+*.rs.bk
+
+# ---- Node / Web-Frontend ----
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# ---- Python Sidecar ----
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ---- Logs & temp ----
+*.log
+*.tmp
+coverage/
