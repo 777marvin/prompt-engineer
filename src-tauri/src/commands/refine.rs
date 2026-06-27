@@ -64,7 +64,6 @@ pub struct RefineChange {
 }
 
 #[tauri::command]
-#[serde(rename_all = "snake_case")]
 pub async fn fast_refine(
     input: String,
     state: State<'_, Arc<AppState>>,

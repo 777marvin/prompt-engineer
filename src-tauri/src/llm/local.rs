@@ -228,7 +228,7 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
         .map_err(|e| AppError::LlmInferenceFailed(format!("detokenization failed: {}", e)))?;
 
     let elapsed = start.elapsed();
-    log::info!("Inference completed in {:?}", elapsed);
+    println!("[FastRefine] Inference completed in {:?}", elapsed);
 
     Ok(output)
 }
