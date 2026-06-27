@@ -10,7 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "title": "Prompt Engineer",
     "windows": [
       {
         "title": "Prompt Engineer",
