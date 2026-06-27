@@ -40,6 +40,8 @@ function App() {
       <ProgressIndicator
         value={value}
         status={modelStatus}
+        downloadedBytes={downloadedBytes}
+        totalBytes={totalBytes}
         error={error ?? undefined}
         onRetry={handleRetry}
       />

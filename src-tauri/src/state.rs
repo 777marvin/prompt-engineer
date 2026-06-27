@@ -1,3 +1,4 @@
+use crate::llm::router::LlmRouter;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
@@ -43,12 +44,14 @@ impl LlmState {
 
 pub struct AppState {
     pub llm: LlmState,
+    pub router: LlmRouter,
 }
 
 impl AppState {
     pub fn new(app_data_dir: PathBuf) -> Self {
         Self {
             llm: LlmState::new(app_data_dir),
+            router: LlmRouter::new(),
         }
     }
 

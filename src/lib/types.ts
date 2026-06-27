@@ -6,6 +6,7 @@ export interface AppError {
 export type AppErrorCode =
   | "LLM_NOT_READY"
   | "LLM_INFERENCE_FAILED"
+  | "DOWNLOAD_FAILED"
   | "API_KEY_MISSING"
   | "API_RATE_LIMITED"
   | "API_TIMEOUT"

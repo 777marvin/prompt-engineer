@@ -19,9 +19,16 @@ export async function detectDomain(input: string): Promise<string> {
 
 export async function getModelStatus(): Promise<{
   status: string;
-  progress: number;
+  downloadedBytes: number;
+  totalBytes: number;
+  error: string | null;
 }> {
-  return invoke<{ status: string; progress: number }>("get_model_status");
+  return invoke<{
+    status: string;
+    downloadedBytes: number;
+    totalBytes: number;
+    error: string | null;
+  }>("get_model_status");
 }
 
 export async function retryModelDownload(): Promise<void> {

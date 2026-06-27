@@ -20,9 +20,12 @@ export function useModelDownload() {
           useModelStore
             .getState()
             .setProgress(
-              (status as any).downloadedBytes ?? 0,
-              (status as any).totalBytes ?? 0,
+              status.downloadedBytes ?? 0,
+              status.totalBytes ?? 0,
             );
+        } else if (status.status === "error") {
+          useModelStore.getState().setError(status.error);
+          useModelStore.getState().setStatus("error");
         }
       })
       .catch(() => {
@@ -40,8 +43,9 @@ export function useModelDownload() {
     );
 
     const unlistenReady = listen("model_ready", () => {
+      const state = useModelStore.getState();
       useModelStore.getState().setStatus("ready");
-      useModelStore.getState().setProgress(0, 0);
+      useModelStore.getState().setProgress(state.totalBytes, state.totalBytes);
     });
 
     const unlistenError = listen<{ error: string }>("model_error", (event) => {

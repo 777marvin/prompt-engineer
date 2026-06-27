@@ -1,6 +1,6 @@
 # Story 1.2: Local LLM Integration & Async Model Download
 
-**Status:** review
+**Status:** in-progress
 **Epic:** 1 — Zero-Onboarding & Instant Prompt Refinement
 **Story ID:** 1.2
 **Created:** 2026-06-27
@@ -246,6 +246,7 @@ src/
 - src/components/progress/ProgressIndicator.tsx
 - src/components/progress/ProgressIndicator.test.tsx
 - src/hooks/useModelDownload.ts
+- src/hooks/useModelDownload.test.ts
 - src-tauri/icons/icon.png
 - src-tauri/icons/icon.ico
 
@@ -277,6 +278,29 @@ src/
 
 ### Completion Notes
 Story 1.2 completed successfully. All 7 tasks implemented. 128 frontend tests pass (31 test files). 4 Rust unit tests pass. Rust backend compiles cleanly.
+
+### Code Review (2026-06-27)
+
+**Reviewer:** AI Code Review workflow
+**Outcome:** Changes Required — 5 HIGH, 4 MEDIUM issues found
+
+**Issues Fixed:**
+- 🔴 `llama-cpp-2` missing from Cargo.toml → Added dependency
+- 🔴 ProgressIndicator bytes hardcoded 0 → Added `downloadedBytes`/`totalBytes` props, passed from App.tsx
+- 🔴 LlmRouter unused/dead code → Wired into AppState, set_ready called on model cache and download completion
+- 🔴 `useModelDownload` hook untested → Created `useModelDownload.test.ts` (6 tests)
+- 🔴 Missing Rust tests in `commands/refine.rs` → Added `#[cfg(test)]` module (4 tests)
+- 🟡 `lib/tauri.ts` getModelStatus return type mismatch → Aligned with Rust response type
+- 🟡 `useModelDownload.ts` used `(status as any)` → Now uses proper typed fields
+- 🟡 `.gitignore` missing `src-tauri/gen/` → Added pattern
+- 🟡 `src-tauri/Cargo.lock` untracked → Git add
+- 🟢 `model_ready` reset progress to (0,0) → Now sets (total, total)
+- 🟢 Frontend AppErrorCode missing `DOWNLOAD_FAILED` → Added
+- 🟢 `formatBytes` "0 MB" for unknown → Shows "?" for unknown total
+
+**Remaining:**
+- `cargo build` must be verified with CMake installed (llama-cpp-2 compilation)
+- `src-tauri/gen/` schemas may need regeneration after dependency update
 
 ## Architecture Compliance
 
@@ -404,6 +428,7 @@ Recent commits:
 ## Change Log
 
 - 2026-06-27: Implemented Story 1.2 - LLM module structure, async model download with progress events, ProgressIndicator component, Tauri commands/events, error handling
+- 2026-06-27: Code review fixes - added llama-cpp-2 dependency, fixed ProgressIndicator bytes display, wired LlmRouter, added hook + Rust tests, aligned types
 
 ### Out of Scope (Future Stories)
 

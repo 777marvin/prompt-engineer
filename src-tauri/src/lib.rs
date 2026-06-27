@@ -30,6 +30,7 @@ pub fn run() {
                     llm::local::start_download(app_handle, state);
                 } else {
                     state.set_status(crate::state::ModelStatus::Ready);
+                    state.router.set_ready(true);
                     app_handle.emit("model_ready", ()).ok();
                 }
             });

@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProgressIndicatorProps {
   value: number; // 0-100
   status: "idle" | "downloading" | "ready" | "error";
+  downloadedBytes?: number;
+  totalBytes?: number;
   error?: string;
   onRetry?: () => void;
 }
@@ -25,6 +27,8 @@ function formatBytes(bytes: number): string {
 function ProgressIndicator({
   value,
   status,
+  downloadedBytes = 0,
+  totalBytes = 0,
   error,
   onRetry,
 }: ProgressIndicatorProps) {
@@ -79,7 +83,7 @@ function ProgressIndicator({
           <div className="flex justify-between text-xs text-[var(--color-text-secondary)]">
             <span>{value}%</span>
             <span>
-              {formatBytes(0)} / {formatBytes(0)} MB
+              {formatBytes(downloadedBytes)} / {totalBytes > 0 ? formatBytes(totalBytes) : "?"} MB
             </span>
           </div>
           {/* rotating tips */}

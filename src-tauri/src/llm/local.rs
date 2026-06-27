@@ -78,6 +78,7 @@ async fn download_model(app_handle: AppHandle, state: Arc<AppState>) -> Result<(
 
     // success
     state.set_status(crate::state::ModelStatus::Ready);
+    state.router.set_ready(true);
     app_handle.emit("model_ready", ()).ok();
     Ok(())
 }
