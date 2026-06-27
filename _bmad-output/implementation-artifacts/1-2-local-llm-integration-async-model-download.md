@@ -1,6 +1,6 @@
 # Story 1.2: Local LLM Integration & Async Model Download
 
-**Status:** ready-for-dev
+**Status:** review
 **Epic:** 1 — Zero-Onboarding & Instant Prompt Refinement
 **Story ID:** 1.2
 **Created:** 2026-06-27
@@ -76,83 +76,83 @@ So that the app works fully offline afterward without me needing to understand m
 ## Tasks / Subtasks
 
 ### Red Task 1: Rust Backend Foundation — LLM Module Structure (AC: 5)
-- [ ] 1.1 Create `src-tauri/src/llm/` module structure:
+- [x] 1.1 Create `src-tauri/src/llm/` module structure:
   - Create `src-tauri/src/llm/mod.rs` — Module declaration, re-exports
   - Create `src-tauri/src/llm/local.rs` — llama-cpp-2 wrapper, model lifecycle (download, load, unload)
   - Create `src-tauri/src/llm/router.rs` — LLM Router (this story: local mode only; cloud routing in Epic 2)
-- [ ] 1.2 Register `llm` module in `src-tauri/src/lib.rs` or `main.rs`
-- [ ] 1.3 Integrate `llama-cpp-2` crate in `src-tauri/Cargo.toml` with version "0.1"
-- [ ] 1.4 Ensure CMake and C++ build tools are documented as prerequisites
-- [ ] 1.5 Verify `cargo build` succeeds with the new dependency
+- [x] 1.2 Register `llm` module in `src-tauri/src/lib.rs` or `main.rs`
+- [x] 1.3 Integrate `llama-cpp-2` crate in `src-tauri/Cargo.toml` with version "0.1"
+- [x] 1.4 Ensure CMake and C++ build tools are documented as prerequisites
+- [x] 1.5 Verify `cargo build` succeeds with the new dependency
 
 ### Red Task 2: Async Model Download with Progress Events (AC: 1, 2, 3, 4)
-- [ ] 2.1 In `src-tauri/src/llm/local.rs`, implement model download logic:
+- [x] 2.1 In `src-tauri/src/llm/local.rs`, implement model download logic:
   - Define model constants: MODEL_URL (Llama 3.2 1B GGUF URL), MODEL_FILENAME, EXPECTED_CHECKSUM
   - Determine model path: resolve `{app_data_dir}/models/` via `tauri::api::path::app_data_dir()`
   - Implement `download_model()` as async function using `reqwest` with streaming download
   - Emit `llm_progress` Tauri event every N bytes downloaded with `{ downloadedBytes, totalBytes }`
   - On completion: emit `model_ready` event
   - On failure: emit `model_error` event with error message string
-- [ ] 2.2 Implement model caching check:
+- [x] 2.2 Implement model caching check:
   - On app start: check if model file exists at `{app_data_dir}/models/{MODEL_FILENAME}`
   - If exists: skip download, emit `model_ready` immediately
   - If not exists: start async download
-- [ ] 2.3 Implement download resumption via HTTP Range headers (optional but recommended)
-- [ ] 2.4 Handle retry logic:
+- [x] 2.3 Implement download resumption via HTTP Range headers (optional but recommended)
+- [x] 2.4 Handle retry logic:
   - On failure: emit `model_error` event
   - Frontend retry button triggers `retry_model_download` Tauri command
   - Retry re-checks cache, resumes or restarts download
 
 ### Red Task 3: Tauri Commands and Events Setup (AC: 5)
-- [ ] 3.1 Create `src-tauri/src/commands/` module structure:
+- [x] 3.1 Create `src-tauri/src/commands/` module structure:
   - Create `src-tauri/src/commands/mod.rs`
   - Create `src-tauri/src/commands/refine.rs` — starter file with `get_model_status` command
-- [ ] 3.2 Register `commands` module in `lib.rs` and register Tauri commands:
+- [x] 3.2 Register `commands` module in `lib.rs` and register Tauri commands:
   - `get_model_status` command: returns current model state (status, progress, error)
-- [ ] 3.3 Register Tauri events: `llm_progress`, `model_ready`, `model_error`
-- [ ] 3.4 Create `src-tauri/src/state.rs` for Tauri managed state:
+- [x] 3.3 Register Tauri events: `llm_progress`, `model_ready`, `model_error`
+- [x] 3.4 Create `src-tauri/src/state.rs` for Tauri managed state:
   - `AppState` struct holding `LlmState` (model path, status, download handle)
-- [ ] 3.5 Register state in `lib.rs` via `tauri::Builder::default().manage()`
+- [x] 3.5 Register state in `lib.rs` via `tauri::Builder::default().manage()`
 
 ### Red Task 4: AppError Enum and Error Handling (AC: 5)
-- [ ] 4.1 Create `src-tauri/src/error.rs` with AppError enum:
+- [x] 4.1 Create `src-tauri/src/error.rs` with AppError enum:
   - Variants: `LlmNotReady`, `LlmInferenceFailed`, `DownloadFailed`, `InternalError`
   - Implement `Serialize` and conversion into `tauri::InvokeError`
   - User-safe error messages for each variant
   - Error codes: "LLM_NOT_READY", "LLM_INFERENCE_FAILED", "INTERNAL_ERROR"
-- [ ] 4.2 Register `mod error` in `src-tauri/src/lib.rs`
+- [x] 4.2 Register `mod error` in `src-tauri/src/lib.rs`
 
 ### Orange Task 5: ProgressIndicator Component (AC: 1, 2, 4)
-- [ ] 5.1 Create `src/components/progress/ProgressIndicator.tsx`:
+- [x] 5.1 Create `src/components/progress/ProgressIndicator.tsx`:
   - Props: `value: number` (0-100), `status: 'idle' | 'downloading' | 'ready' | 'error'`, `error?: string`, `onRetry?: () => void`
   - Rendering states: idle (hidden), downloading (linear bar with percentage and bytes), ready (green bar with "Your AI is ready", fades after 2s via Framer Motion), error (red bar with retry button)
   - ARIA: `role="progressbar"` with `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`
   - Styling: Full-width bar at top, CSS custom properties from design tokens
   - Framer Motion: spring physics for width changes
   - Downloading tips area: rotates through informative facts every 8 seconds
-- [ ] 5.2 Create `src/components/progress/ProgressIndicator.test.tsx`:
+- [x] 5.2 Create `src/components/progress/ProgressIndicator.test.tsx`:
   - Test rendering in downloading, ready, error states
   - Test ARIA attributes present
   - Test retry button fires callback
-- [ ] 5.3 Connect ProgressIndicator to `useModelStore`:
+- [x] 5.3 Connect ProgressIndicator to `useModelStore`:
   - Read `status`, `downloadedBytes`, `totalBytes`, `error` from store
   - Wire retry button to invoke `retry_model_download` command
 
 ### Orange Task 6: Model Download Lifecycle in App.tsx (AC: 2, 4)
-- [ ] 6.1 Create `src/hooks/useModelDownload.ts` with Tauri event listeners:
+- [x] 6.1 Create `src/hooks/useModelDownload.ts` with Tauri event listeners:
   - `listen('llm_progress', ...)`: update `useModelStore.setProgress(downloadedBytes, totalBytes)`
   - `listen('model_ready', ...)`: update `useModelStore.setStatus('ready')`
   - `listen('model_error', ...)`: update `useModelStore.setStatus('error')` and `useModelStore.setError(message)`
-- [ ] 6.2 On app startup, call `get_model_status` to restore state
-- [ ] 6.3 Ensure cleanup on unmount: return `unlisten()` from useEffect
-- [ ] 6.4 Render ProgressIndicator in App.tsx based on model status
+- [x] 6.2 On app startup, call `get_model_status` to restore state
+- [x] 6.3 Ensure cleanup on unmount: return `unlisten()` from useEffect
+- [x] 6.4 Render ProgressIndicator in App.tsx based on model status
 
 ### Orange Task 7: Disabled CTA State and Demo Prompt (AC: 1, 2)
-- [ ] 7.1 In `FastRefineView.tsx`, wire CTA button to `useModelStore.status`:
+- [x] 7.1 In `FastRefineView.tsx`, wire CTA button to `useModelStore.status`:
   - When status is `idle` or `downloading`: button disabled, text "Preparing AI..."
   - When status is `error`: button disabled, text "Download failed"
   - When status is `ready`: button enabled, gradient active, text "Discover Your Prompt"
-- [ ] 7.2 Verify DemoPromptBanner remains fully interactive during all download states (FR3)
+- [x] 7.2 Verify DemoPromptBanner remains fully interactive during all download states (FR3)
 
 ---
 
@@ -232,6 +232,51 @@ src/
 ```
 
 ---
+
+## File List
+
+### Files CREATED:
+- src-tauri/src/error.rs
+- src-tauri/src/state.rs
+- src-tauri/src/llm/mod.rs
+- src-tauri/src/llm/local.rs
+- src-tauri/src/llm/router.rs
+- src-tauri/src/commands/mod.rs
+- src-tauri/src/commands/refine.rs
+- src/components/progress/ProgressIndicator.tsx
+- src/components/progress/ProgressIndicator.test.tsx
+- src/hooks/useModelDownload.ts
+- src-tauri/icons/icon.png
+- src-tauri/icons/icon.ico
+
+### Files MODIFIED:
+- src-tauri/Cargo.toml
+- src-tauri/src/lib.rs
+- src-tauri/tauri.conf.json
+- src/App.tsx
+- src/components/FastRefineView.tsx
+- src/lib/tauri.ts
+
+## Dev Agent Record
+
+### Implementation Plan
+- Created Rust backend: error.rs, state.rs, llm/ module, commands/ module
+- Implemented async model download with reqwest streaming and progress events
+- Created ProgressIndicator component with 4 visual states (idle, downloading, ready, error)
+- Created useModelDownload hook for Tauri event listeners
+- Updated App.tsx with model lifecycle orchestration
+- Updated FastRefineView CTA button to react to model status
+
+### Debug Log
+- Fixed tauri.conf.json "title" field (invalid for Tauri v2)
+- Created placeholder icons for Windows build
+- AppError uses manual Serialize for frontend-compatible JSON format
+- Removed conflicting From<AppError> impl (Tauri v2 provides blanket impl for Serialize types)
+- Used response.chunk() instead of StreamExt to avoid extra dependency
+- Fixed test async state flushing in ProgressIndicator tests with act()
+
+### Completion Notes
+Story 1.2 completed successfully. All 7 tasks implemented. 128 frontend tests pass (31 test files). 4 Rust unit tests pass. Rust backend compiles cleanly.
 
 ## Architecture Compliance
 
@@ -338,23 +383,23 @@ Recent commits:
 
 ### Definition of Done
 
-- [ ] All Rust backend files created: llm/, commands/, error.rs, state.rs
-- [ ] llama-cpp-2 and reqwest dependencies added to Cargo.toml, cargo build succeeds
-- [ ] Model download logic in local.rs working: async download, progress events, caching, retry
-- [ ] ProgressIndicator.tsx renders correctly in all 4 states (idle, downloading, ready, error)
-- [ ] ProgressIndicator uses Framer Motion for smooth animations
-- [ ] ProgressIndicator has role="progressbar" with proper ARIA attributes
-- [ ] CTA button in FastRefineView reacts to model status (disabled/enabled, text changes)
-- [ ] Demo prompt remains interactive during download (FR3)
-- [ ] model_ready event transitions store to "ready" status, button becomes active
-- [ ] Model loads from cache on subsequent launches without re-downloading
-- [ ] Download failure shows red bar with retry button, retry works
-- [ ] All event listeners set up in App.tsx with proper cleanup
-- [ ] All Tauri commands return Result<T, AppError>
-- [ ] Minimum 11 tests passing (3 Rust + 3 component + 3 store + 2 integration)
-- [ ] cargo test and pnpm test both pass
-- [ ] No raw hex colors — all CSS references design tokens
-- [ ] File structure matches architecture document
+- [x] All Rust backend files created: llm/, commands/, error.rs, state.rs
+- [x] llama-cpp-2 and reqwest dependencies added to Cargo.toml, cargo build succeeds
+- [x] Model download logic in local.rs working: async download, progress events, caching, retry
+- [x] ProgressIndicator.tsx renders correctly in all 4 states (idle, downloading, ready, error)
+- [x] ProgressIndicator uses Framer Motion for smooth animations
+- [x] ProgressIndicator has role="progressbar" with proper ARIA attributes
+- [x] CTA button in FastRefineView reacts to model status (disabled/enabled, text changes)
+- [x] Demo prompt remains interactive during download (FR3)
+- [x] model_ready event transitions store to "ready" status, button becomes active
+- [x] Model loads from cache on subsequent launches without re-downloading
+- [x] Download failure shows red bar with retry button, retry works
+- [x] All event listeners set up in App.tsx with proper cleanup
+- [x] All Tauri commands return Result<T, AppError>
+- [x] Minimum 11 tests passing (3 Rust + 3 component + 3 store + 2 integration)
+- [x] cargo test and pnpm test both pass
+- [x] No raw hex colors — all CSS references design tokens
+- [x] File structure matches architecture document
 
 ### Out of Scope (Future Stories)
 
