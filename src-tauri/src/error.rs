@@ -1,7 +1,7 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Clone, Serialize, Error)]
+#[derive(Debug, Clone, Serialize, Deserialize, Error)]
 #[serde(rename_all = "camelCase")]
 pub enum AppError {
     #[error("LLM not ready - model is still downloading")]
