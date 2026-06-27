@@ -167,11 +167,8 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
         )
         .map_err(|e| AppError::LlmInferenceFailed(format!("context creation failed: {}", e)))?;
 
-    // Format prompt using simple template
-    let prompt = format!(
-        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-        user_input
-    );
+    // Format prompt using PROMPT_TEMPLATE
+    let prompt = PROMPT_TEMPLATE.replace("{user_input}", user_input);
 
     // Tokenize
     let tokens = ctx
