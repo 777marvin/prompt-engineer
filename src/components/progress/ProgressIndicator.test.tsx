@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import ProgressIndicator from "./ProgressIndicator";
 
 // mock framer-motion (no animation needed in test)
@@ -52,7 +52,9 @@ describe("ProgressIndicator", () => {
     vi.useFakeTimers();
     render(<ProgressIndicator value={100} status="ready" />);
     expect(screen.getByText("Your AI is ready")).toBeInTheDocument();
-    vi.advanceTimersByTime(2000);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     // after 2 seconds the component should have unmounted the message
     expect(screen.queryByText("Your AI is ready")).not.toBeInTheDocument();
     vi.useRealTimers();
