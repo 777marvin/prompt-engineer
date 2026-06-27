@@ -2,6 +2,7 @@ use crate::error::AppError;
 use crate::state::AppState;
 use serde::Serialize;
 use std::sync::Arc;
+use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
 
@@ -111,4 +112,191 @@ pub fn retry_download(app_handle: AppHandle, state: Arc<AppState>) {
         *error_guard = None;
     }
     start_download(app_handle, state);
+}
+
+/// Prompt engineering template for Fast Refine.
+/// Instructs the LLM to restructure raw user input into Role/Task/Format/Context components.
+/// Uses Llama 3.2 chat format with system and user messages.
+const PROMPT_TEMPLATE: &str = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You are a prompt engineering assistant. Your task is to restructure the user's raw input into a well-formed prompt with four clear components:
+
+1. **Role**: Assign an appropriate expert persona for this task
+2. **Task**: Extract and clearly state the core action or question
+3. **Format**: Specify the desired output structure
+4. **Context**: Add relevant background, constraints, or tone guidance
+
+Output ONLY valid JSON with these exact keys: \"role\", \"task\", \"format\", \"context\"
+Do NOT include any other text, markdown, or explanation.
+
+Example 1:
+Input: \"write an email to my boss about missing deadline\"
+Output: {\"role\": \"professional corporate email writer\", \"task\": \"draft an apology email to the manager regarding a missed deadline\", \"format\": \"formal business email with subject line, salutation, body, and closing\", \"context\": \"tone should be apologetic but professional, offering a revised timeline and taking responsibility\"}
+
+Example 2:
+Input: \"explain quantum computing to a 10 year old\"
+Output: {\"role\": \"patient and creative science teacher for children\", \"task\": \"explain the concept of quantum computing in simple terms\", \"format\": \"engaging explanation with analogies and simple language, 3-4 paragraphs\", \"context\": \"audience is a 10-year-old child with no prior physics knowledge, use fun analogies like spinning coins and magic books\"}
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+{user_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>";
+
+use llama_cpp_2::batch::LlamaBatch;
+use llama_cpp_2::context::params::LlamaContextParams;
+use llama_cpp_2::context::LlamaContext;
+use llama_cpp_2::model::params::LlamaModelParams;
+use llama_cpp_2::model::LlamaModel;
+use llama_cpp_2::sampler::LlamaSampler;
+use llama_cpp_2::token::data_array::LlamaTokenDataArray;
+
+pub fn run_inference(model_path: &std::path::Path, user_input: &str) -> Result<String, AppError> {
+    let start = Instant::now();
+
+    // Load model
+    let model = LlamaModel::load_from_file(model_path, LlamaModelParams::default())
+        .map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
+
+    // Create context
+    let ctx = model
+        .create_context(
+            LlamaContextParams::default()
+                .with_n_ctx(2048)
+                .with_n_batch(512),
+        )
+        .map_err(|e| AppError::LlmInferenceFailed(format!("context creation failed: {}", e)))?;
+
+    // Format prompt
+    let prompt = PROMPT_TEMPLATE.replace("{user_input}", user_input);
+
+    // Tokenize
+    let tokens = ctx
+        .tokenize(&prompt, true)
+        .map_err(|e| AppError::LlmInferenceFailed(format!("tokenization failed: {}", e)))?;
+
+    let n_tokens = tokens.len();
+    let n_predict = 512;
+    let n_batch = 512;
+
+    // Create batch and add tokens
+    let mut batch = LlamaBatch::new(n_batch, 1, 1)
+        .map_err(|e| AppError::LlmInferenceFailed(format!("batch creation failed: {}", e)))?;
+
+    for (i, token) in tokens.iter().enumerate() {
+        batch
+            .add(*token, i as i32, &[0], i == n_tokens - 1)
+            .map_err(|e| AppError::LlmInferenceFailed(format!("batch add failed: {}", e)))?;
+    }
+
+    // Decode initial batch
+    ctx.decode(&mut batch)
+        .map_err(|e| AppError::LlmInferenceFailed(format!("initial decode failed: {}", e)))?;
+
+    let mut output_tokens = Vec::new();
+    let mut n_cur = n_tokens;
+
+    while n_cur - n_tokens < n_predict {
+        let candidates = LlamaTokenDataArray::from_logits(ctx.logits())
+            .map_err(|e| AppError::LlmInferenceFailed(format!("logits failed: {}", e)))?;
+
+        let mut sampler = LlamaSampler::greedy();
+        let new_token_id = sampler
+            .sample(ctx, candidates)
+            .map_err(|e| AppError::LlmInferenceFailed(format!("sampling failed: {}", e)))?;
+
+        if new_token_id == ctx.token_eos() {
+            break;
+        }
+
+        output_tokens.push(new_token_id);
+
+        let mut next_batch = LlamaBatch::new(1, 1, 1)
+            .map_err(|e| AppError::LlmInferenceFailed(format!("batch creation failed: {}", e)))?;
+        next_batch
+            .add(new_token_id, n_cur as i32, &[0], true)
+            .map_err(|e| AppError::LlmInferenceFailed(format!("batch add failed: {}", e)))?;
+
+        ctx.decode(&mut next_batch)
+            .map_err(|e| AppError::LlmInferenceFailed(format!("decode failed: {}", e)))?;
+
+        n_cur += 1;
+    }
+
+    let output = ctx
+        .detokenize(&output_tokens)
+        .map_err(|e| AppError::LlmInferenceFailed(format!("detokenization failed: {}", e)))?;
+
+    let elapsed = start.elapsed();
+    log::info!("Inference completed in {:?}", elapsed);
+
+    Ok(output)
+}
+
+pub fn parse_llm_output(raw_output: &str, original_input: &str) -> crate::commands::refine::RefineResult {
+    // Try to parse as JSON first
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw_output.trim()) {
+        let role = parsed.get("role").and_then(|v| v.as_str()).unwrap_or("");
+        let task = parsed.get("task").and_then(|v| v.as_str()).unwrap_or("");
+        let format = parsed.get("format").and_then(|v| v.as_str()).unwrap_or("");
+        let context = parsed.get("context").and_then(|v| v.as_str()).unwrap_or("");
+
+        let refined = format!(
+            "**Role:** {}\n\n**Task:** {}\n\n**Format:** {}\n\n**Context:** {}",
+            role, task, format, context
+        );
+
+        let changes = vec![crate::commands::refine::RefineChange {
+            change_type: "modified".to_string(),
+            text: refined.clone(),
+            reason: "Restructured raw input into Role/Task/Format/Context components".to_string(),
+        }];
+
+        return crate::commands::refine::RefineResult {
+            original: original_input.to_string(),
+            refined,
+            changes,
+        };
+    }
+
+    // Fallback: wrap raw input with basic structure
+    let refined = format!(
+        "**Task:** {}\n\n**Context:** (no additional context detected)",
+        original_input
+    );
+
+    crate::commands::refine::RefineResult {
+        original: original_input.to_string(),
+        refined,
+        changes: vec![crate::commands::refine::RefineChange {
+            change_type: "modified".to_string(),
+            text: refined.clone(),
+            reason: "Applied basic structure (LLM output was not parseable)".to_string(),
+        }],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_llm_output_valid_json() {
+        let input = "write an email";
+        let json_output =
+            r#"{"role":"test role","task":"test task","format":"test format","context":"test context"}"#;
+        let result = parse_llm_output(json_output, input);
+        assert_eq!(result.original, input);
+        assert!(result.refined.contains("**Role:**"));
+        assert!(result.refined.contains("test role"));
+        assert_eq!(result.changes.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_llm_output_fallback() {
+        let input = "simple input";
+        let fallback_output = "non-json text";
+        let result = parse_llm_output(fallback_output, input);
+        assert_eq!(result.original, input);
+        assert!(result.refined.contains("**Task:**"));
+        assert_eq!(result.changes.len(), 1);
+    }
 }

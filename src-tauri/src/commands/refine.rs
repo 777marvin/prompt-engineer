@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use crate::state::AppState;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
@@ -43,6 +43,39 @@ pub async fn retry_model_download(
     let state_clone = state.inner().clone();
     crate::llm::local::retry_download(app_handle, state_clone);
     Ok(())
+}
+
+// ---------- Fast Refine types ----------
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefineResult {
+    pub original: String,
+    pub refined: String,
+    pub changes: Vec<RefineChange>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefineChange {
+    #[serde(rename = "type")]
+    pub change_type: String,
+    pub text: String,
+    pub reason: String,
+}
+
+#[tauri::command]
+#[serde(rename_all = "snake_case")]
+pub async fn fast_refine(
+    input: String,
+    state: State<'_, Arc<AppState>>,
+) -> Result<RefineResult, AppError> {
+    if !state.router.is_ready() {
+        return Err(AppError::LlmNotReady);
+    }
+    let model_path = state.llm.model_file_path();
+    let raw_output = crate::llm::local::run_inference(&model_path, &input)?;
+    let result = crate::llm::local::parse_llm_output(&raw_output, &input);
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -127,5 +160,35 @@ mod tests {
             };
             assert_eq!(response.status, expected);
         }
+    }
+
+    #[test]
+    fn test_refine_result_serde() {
+        let change = RefineChange {
+            change_type: "modified".into(),
+            text: "test text".into(),
+            reason: "test reason".into(),
+        };
+        let result = RefineResult {
+            original: "orig".into(),
+            refined: "refined".into(),
+            changes: vec![change],
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("original"));
+        assert!(json.contains("refined"));
+        assert!(json.contains("modified"));
+    }
+
+    #[test]
+    fn test_refine_change_type_field() {
+        let change = RefineChange {
+            change_type: "added".into(),
+            text: "text".into(),
+            reason: "reason".into(),
+        };
+        let json = serde_json::to_string(&change).unwrap();
+        // The field is serialized as "type"
+        assert!(json.contains("\"type\":\"added\""));
     }
 }

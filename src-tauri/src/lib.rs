@@ -40,6 +40,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::refine::get_model_status,
             commands::refine::retry_model_download,
+            commands::refine::fast_refine,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
