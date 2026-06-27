@@ -1,8 +1,7 @@
-use serde::{Deserialize, Serialize};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use thiserror::Error;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Error)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Error)]
 pub enum AppError {
     #[error("LLM not ready - model is still downloading")]
     LlmNotReady,
@@ -20,6 +19,15 @@ pub enum AppError {
     InternalError(String),
 }
 
+impl Serialize for AppError {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("AppError", 2)?;
+        state.serialize_field("code", self.error_code())?;
+        state.serialize_field("message", &self.to_string())?;
+        state.end()
+    }
+}
+
 impl AppError {
     pub fn error_code(&self) -> &'static str {
         match self {
@@ -32,7 +40,6 @@ impl AppError {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,13 +48,8 @@ mod tests {
     fn test_serialization() {
         let err = AppError::LlmNotReady;
         let json = serde_json::to_string(&err).unwrap();
-        assert!(json.contains("\"code\""));
-        assert!(json.contains("\"message\""));
-        // Since we use #[serde(rename_all = "camelCase")] the fields will be
-        // "llmNotReady" as variant? Actually enum serialization
-        // uses variant name, renamed. Just check it doesn't crash.
-        // For safety we check that we can deserialize back:
-        let _deserialized: AppError = serde_json::from_str(&json).unwrap();
+        assert!(json.contains("LLM_NOT_READY"));
+        assert!(json.contains("message"));
     }
 
     #[test]
