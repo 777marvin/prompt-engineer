@@ -1,6 +1,8 @@
+use crate::commands::refine::{RefineChange, RefineResult};
 use crate::error::AppError;
 use crate::state::AppState;
 use serde::Serialize;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
@@ -149,7 +151,7 @@ use llama_cpp_2::model::LlamaModel;
 use llama_cpp_2::sampler::LlamaSampler;
 use llama_cpp_2::token::data_array::LlamaTokenDataArray;
 
-pub fn run_inference(model_path: &std::path::Path, user_input: &str) -> Result<String, AppError> {
+pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppError> {
     let start = Instant::now();
 
     // Load model
@@ -165,8 +167,11 @@ pub fn run_inference(model_path: &std::path::Path, user_input: &str) -> Result<S
         )
         .map_err(|e| AppError::LlmInferenceFailed(format!("context creation failed: {}", e)))?;
 
-    // Format prompt
-    let prompt = PROMPT_TEMPLATE.replace("{user_input}", user_input);
+    // Format prompt using simple template
+    let prompt = format!(
+        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+        user_input
+    );
 
     // Tokenize
     let tokens = ctx
