@@ -10,6 +10,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 beforeEach(() => {
+  vi.clearAllMocks();
   useModelStore.setState({
     status: "ready",
     downloadedBytes: 0,
