@@ -28,6 +28,8 @@ works, and practice deliberately. Planned capabilities:
 **Built:** Tauri v2 + React 18 + Vite + TypeScript scaffold, Tailwind v4 design
 tokens, Zustand stores, theme toggle, welcome screen, test setup (Vitest + RTL).
 
+<img src="docs/screenshots/welcome.png" width="700" alt="Welcome screen (early development)">
+
 **Next:** local-LLM integration → Fast Refine engine → Prompt Dissector.
 
 **Backlog:** Master Mode, application shell, LLM adapters, gamification,
