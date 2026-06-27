@@ -143,27 +143,42 @@ Output: {\"role\": \"patient and creative science teacher for children\", \"task
 
 {user_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>";
 
-use llama_cpp_2::batch::LlamaBatch;
 use llama_cpp_2::context::params::LlamaContextParams;
-use llama_cpp_2::context::LlamaContext;
+use llama_cpp_2::llama_batch::LlamaBatch;
+use llama_cpp_2::llama_backend::LlamaBackend;
 use llama_cpp_2::model::params::LlamaModelParams;
 use llama_cpp_2::model::LlamaModel;
-use llama_cpp_2::sampler::LlamaSampler;
-use llama_cpp_2::token::data_array::LlamaTokenDataArray;
+use llama_cpp_2::sampling::LlamaSampler;
+use std::num::NonZero;
+use std::sync::OnceLock;
+
+fn get_backend() -> &'static LlamaBackend {
+    static BACKEND: OnceLock<LlamaBackend> = OnceLock::new();
+    BACKEND.get_or_init(|| {
+        LlamaBackend::init().expect("Failed to initialize llama backend")
+    })
+}
 
 pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppError> {
     let start = Instant::now();
 
+    let backend = get_backend();
+
     // Load model
-    let model = LlamaModel::load_from_file(model_path, LlamaModelParams::default())
-        .map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
+    let model = LlamaModel::load_from_file(
+        backend,
+        model_path,
+        &LlamaModelParams::default(),
+    )
+    .map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
 
     // Create context
     let ctx = model
-        .create_context(
+        .new_context(
+            backend,
             LlamaContextParams::default()
-                .with_n_ctx(2048)
-                .with_n_batch(512),
+                .with_n_ctx(NonZero::new(2048))
+                .with_n_batch(NonZero::new(512)),
         )
         .map_err(|e| AppError::LlmInferenceFailed(format!("context creation failed: {}", e)))?;
 
@@ -177,10 +192,9 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
 
     let n_tokens = tokens.len();
     let n_predict = 512;
-    let n_batch = 512;
 
     // Create batch and add tokens
-    let mut batch = LlamaBatch::new(n_batch, 1, 1)
+    let mut batch = LlamaBatch::new(n_tokens, 1)
         .map_err(|e| AppError::LlmInferenceFailed(format!("batch creation failed: {}", e)))?;
 
     for (i, token) in tokens.iter().enumerate() {
@@ -197,13 +211,9 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
     let mut n_cur = n_tokens;
 
     while n_cur - n_tokens < n_predict {
-        let candidates = LlamaTokenDataArray::from_logits(ctx.logits())
-            .map_err(|e| AppError::LlmInferenceFailed(format!("logits failed: {}", e)))?;
-
+        let candidates = ctx.token_data_array();
         let mut sampler = LlamaSampler::greedy();
-        let new_token_id = sampler
-            .sample(ctx, candidates)
-            .map_err(|e| AppError::LlmInferenceFailed(format!("sampling failed: {}", e)))?;
+        let new_token_id = sampler.sample(&ctx, (n_cur - 1) as i32);
 
         if new_token_id == ctx.token_eos() {
             break;
@@ -211,7 +221,7 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
 
         output_tokens.push(new_token_id);
 
-        let mut next_batch = LlamaBatch::new(1, 1, 1)
+        let mut next_batch = LlamaBatch::new(1, 1)
             .map_err(|e| AppError::LlmInferenceFailed(format!("batch creation failed: {}", e)))?;
         next_batch
             .add(new_token_id, n_cur as i32, &[0], true)
