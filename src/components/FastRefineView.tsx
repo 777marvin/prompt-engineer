@@ -7,6 +7,21 @@ import ThemeToggle from "./navigation/ThemeToggle";
 import usePromptStore from "../stores/usePromptStore";
 import useModelStore from "../stores/useModelStore";
 
+function getButtonText(status: string): string {
+  switch (status) {
+    case "idle":
+      return "Initializing...";
+    case "downloading":
+      return "Preparing AI...";
+    case "error":
+      return "Download failed - Retry";
+    case "ready":
+      return "✨ Discover Your Prompt";
+    default:
+      return "Preparing AI...";
+  }
+}
+
 function FastRefineView() {
   const [showDemo, setShowDemo] = useState(true);
   const input = usePromptStore((s) => s.input);
@@ -18,7 +33,7 @@ function FastRefineView() {
     setShowDemo(false);
   };
 
-  const isDisabled = modelStatus !== "ready";
+  const isDisabled = modelStatus !== "ready" || input.trim() === "";
 
   return (
     <main
@@ -44,23 +59,21 @@ function FastRefineView() {
         />
         <motion.button
           type="button"
-          disabled={isDisabled || input.trim() === ""}
+          disabled={isDisabled}
           className={`mt-4 px-8 py-3 text-lg font-semibold rounded-full text-white transition-all duration-[var(--duration-natural)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-primary)] ${
-            isDisabled || input.trim() === ""
+            isDisabled
               ? "bg-[var(--color-text-tertiary)] cursor-not-allowed opacity-60"
               : "bg-gradient-to-r from-[var(--color-accent-secondary)] to-[var(--color-accent-tertiary)] shadow-glow hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
           }`}
           whileHover={
-            !isDisabled && input.trim() !== ""
-              ? { scale: 1.02 }
-              : undefined
+            !isDisabled ? { scale: 1.02 } : undefined
           }
           whileTap={
-            !isDisabled && input.trim() !== "" ? { scale: 0.98 } : undefined
+            !isDisabled ? { scale: 0.98 } : undefined
           }
-          aria-label="Discover your prompt"
+          aria-label={getButtonText(modelStatus)}
         >
-          {isDisabled ? "Preparing AI..." : "✦ Discover Your Prompt"}
+          {getButtonText(modelStatus)}
         </motion.button>
       </div>
     </main>

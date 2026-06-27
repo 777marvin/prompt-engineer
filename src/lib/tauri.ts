@@ -23,3 +23,7 @@ export async function getModelStatus(): Promise<{
 }> {
   return invoke<{ status: string; progress: number }>("get_model_status");
 }
+
+export async function retryModelDownload(): Promise<void> {
+  return invoke<void>("retry_model_download");
+}
