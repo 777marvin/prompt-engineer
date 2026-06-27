@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
+use encoding_rs;
 
 const MODEL_URL: &str = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf";
 
@@ -227,8 +228,9 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
 
     // Detokenize using model.token_to_piece for each token
     let mut output = String::new();
+    let mut decoder = encoding_rs::UTF_8.new_decoder();
     for token in &output_tokens {
-        let piece = model.token_to_piece(*token, false, None)
+        let piece = model.token_to_piece(*token, &mut decoder, false, None)
             .map_err(|e| AppError::LlmInferenceFailed(format!("detokenization failed: {}", e)))?;
         output.push_str(&piece);
     }
