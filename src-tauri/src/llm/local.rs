@@ -6,7 +6,6 @@ use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
 
 const MODEL_URL: &str = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf";
-const MODEL_FILENAME: &str = "llama-3.2-1b-instruct-q4_k_m.gguf";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
