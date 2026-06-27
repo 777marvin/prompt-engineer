@@ -401,6 +401,10 @@ Recent commits:
 - [x] No raw hex colors — all CSS references design tokens
 - [x] File structure matches architecture document
 
+## Change Log
+
+- 2026-06-27: Implemented Story 1.2 - LLM module structure, async model download with progress events, ProgressIndicator component, Tauri commands/events, error handling
+
 ### Out of Scope (Future Stories)
 
 - Fast Refine inference, LLM Router routing — Story 1.3
