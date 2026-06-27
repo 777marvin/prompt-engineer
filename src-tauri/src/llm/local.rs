@@ -144,12 +144,11 @@ Output: {\"role\": \"patient and creative science teacher for children\", \"task
 {user_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>";
 
 use llama_cpp_2::context::params::LlamaContextParams;
-use llama_cpp_2::llama_batch::LlamaBatch;
 use llama_cpp_2::llama_backend::LlamaBackend;
+use llama_cpp_2::llama_batch::LlamaBatch;
 use llama_cpp_2::model::params::LlamaModelParams;
-use llama_cpp_2::model::LlamaModel;
+use llama_cpp_2::model::{AddBos, LlamaModel};
 use llama_cpp_2::sampling::LlamaSampler;
-use std::num::NonZero;
 use std::sync::OnceLock;
 
 fn get_backend() -> &'static LlamaBackend {
@@ -169,37 +168,31 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
         backend,
         model_path,
         &LlamaModelParams::default(),
-    )
-    .map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
+    ).map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
 
     // Create context
-    let ctx = model
-        .new_context(
-            backend,
-            LlamaContextParams::default()
-                .with_n_ctx(NonZero::new(2048))
-                .with_n_batch(NonZero::new(512)),
-        )
-        .map_err(|e| AppError::LlmInferenceFailed(format!("context creation failed: {}", e)))?;
+    let ctx = model.new_context(
+        backend,
+        LlamaContextParams::default()
+            .with_n_ctx(std::num::NonZero::new(2048))
+            .with_n_batch(512),
+    ).map_err(|e| AppError::LlmInferenceFailed(format!("context creation failed: {}", e)))?;
 
     // Format prompt using PROMPT_TEMPLATE
     let prompt = PROMPT_TEMPLATE.replace("{user_input}", user_input);
 
-    // Tokenize
-    let tokens = ctx
-        .tokenize(&prompt, true)
+    // Tokenize using model.str_to_token
+    let tokens = model.str_to_token(&prompt, AddBos::Always)
         .map_err(|e| AppError::LlmInferenceFailed(format!("tokenization failed: {}", e)))?;
 
     let n_tokens = tokens.len();
     let n_predict = 512;
 
-    // Create batch and add tokens
-    let mut batch = LlamaBatch::new(n_tokens, 1)
-        .map_err(|e| AppError::LlmInferenceFailed(format!("batch creation failed: {}", e)))?;
+    // Create batch and add tokens (LlamaBatch::new does NOT return Result)
+    let mut batch = LlamaBatch::new(n_tokens, 1);
 
     for (i, token) in tokens.iter().enumerate() {
-        batch
-            .add(*token, i as i32, &[0], i == n_tokens - 1)
+        batch.add(*token, i as i32, &[0], i == n_tokens - 1)
             .map_err(|e| AppError::LlmInferenceFailed(format!("batch add failed: {}", e)))?;
     }
 
@@ -215,16 +208,15 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
         let mut sampler = LlamaSampler::greedy();
         let new_token_id = sampler.sample(&ctx, (n_cur - 1) as i32);
 
-        if new_token_id == ctx.token_eos() {
+        if new_token_id == ctx.model.token_eos() {
             break;
         }
 
         output_tokens.push(new_token_id);
 
-        let mut next_batch = LlamaBatch::new(1, 1)
-            .map_err(|e| AppError::LlmInferenceFailed(format!("batch creation failed: {}", e)))?;
-        next_batch
-            .add(new_token_id, n_cur as i32, &[0], true)
+        // LlamaBatch::new does NOT return Result
+        let mut next_batch = LlamaBatch::new(1, 1);
+        next_batch.add(new_token_id, n_cur as i32, &[0], true)
             .map_err(|e| AppError::LlmInferenceFailed(format!("batch add failed: {}", e)))?;
 
         ctx.decode(&mut next_batch)
@@ -233,9 +225,13 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
         n_cur += 1;
     }
 
-    let output = ctx
-        .detokenize(&output_tokens)
-        .map_err(|e| AppError::LlmInferenceFailed(format!("detokenization failed: {}", e)))?;
+    // Detokenize using model.token_to_piece for each token
+    let mut output = String::new();
+    for token in &output_tokens {
+        let piece = model.token_to_piece(*token, false, None)
+            .map_err(|e| AppError::LlmInferenceFailed(format!("detokenization failed: {}", e)))?;
+        output.push_str(&piece);
+    }
 
     let elapsed = start.elapsed();
     println!("[FastRefine] Inference completed in {:?}", elapsed);
