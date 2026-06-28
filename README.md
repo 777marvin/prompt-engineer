@@ -1,8 +1,8 @@
 # Prompt Engineer
 
-> **⚠️ Status: Early development.** The scaffold, welcome screen (Story 1.1), and
-> local LLM integration with async model download (Story 1.2) are built. Most
-> features below are not implemented yet. See the roadmap.
+> **⚠️ Status: Early development.** The scaffold, welcome screen (Story 1.1),
+> local LLM integration (Story 1.2), and Fast Refine engine (Story 1.3) are
+> built. Most features below are not yet implemented. See the roadmap.
 
 A local, offline desktop app for practicing prompt engineering — built with
 **Tauri v2**, **React 18**, and **TypeScript**, no account required.
@@ -26,11 +26,14 @@ works, and practice deliberately. Planned capabilities:
 
 ## Status & roadmap
 **Built:** Tauri v2 + React 18 + Vite + TypeScript scaffold, Tailwind v4 design
-tokens, Zustand stores, theme toggle, welcome screen, test setup (Vitest + RTL).
+tokens, Zustand stores, theme toggle, welcome screen, local LLM download &
+caching (Llama 3.2 1B), Fast Refine engine (llama-cpp-2 inference, prompt
+engineering template, clipboard copy, responsive layout), test setup (Vitest +
+RTL + Rust unit tests).
 
 <img src="docs/screenshots/welcome.png" width="700" alt="Welcome screen (early development)">
 
-**Next:** Fast Refine engine → Prompt Dissector → application shell.
+**Next:** Prompt Dissector → Connectivity/Offline detection → Before/After Diff viewer.
 
 **Backlog:** Master Mode, application shell, LLM adapters, gamification,
 NLP domain detection, distribution.
@@ -44,8 +47,8 @@ Full epic/story breakdown: [`_bmad-output/planning-artifacts/epics.md`](./_bmad-
 | Frontend  | React 18, TypeScript (strict), Vite  | —                                |
 | Styling   | Tailwind v4, Framer Motion           | —                                |
 | State     | Zustand                              | —                                |
-| Testing   | Vitest + React Testing Library       | cargo test (Rust)                |
-| Local LLM | llama-cpp-rs, Llama 3.2 1B          | —                                |
+| Testing   | Vitest + React Testing Library + Rust unit tests | —                    |
+| Local LLM | llama-cpp-2, Llama 3.2 1B (Q4_K_M) | —                                |
 | NLP       | —                                    | Python sidecar (spaCy), JSON-RPC |
 | Storage   | —                                    | SQLite, OS keychain (stronghold) |
 | CI/CD     | —                                    | GitHub Actions, auto-update      |
@@ -53,8 +56,8 @@ Full epic/story breakdown: [`_bmad-output/planning-artifacts/epics.md`](./_bmad-
 **Target platforms:** Windows 10+, macOS 12+, Ubuntu 22.04+.
 
 ## Getting started (dev)
-Requires Node 20+, pnpm 9+, Rust 1.77+ (plus a C++ compiler + CMake once the
-local-LLM work lands).
+Requires Node 20+, pnpm 9+, Rust 1.77+, CMake 3.20+, and a C++ compiler
+(llama-cpp-2 builds from source).
 
 ```bash
 git clone https://github.com/777marvin/prompt-engineer.git
