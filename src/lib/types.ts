@@ -1,3 +1,15 @@
+export interface RefineResult {
+  original: string;
+  refined: string;
+  changes: RefineChange[];
+}
+
+export interface RefineChange {
+  type: "added" | "removed" | "modified";
+  text: string;
+  reason: string;
+}
+
 export interface AppError {
   code: AppErrorCode;
   message: string;

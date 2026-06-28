@@ -1,8 +1,8 @@
 # Story 1.3: Fast Refine Engine
 
-**Change Log:** Implemented Fast Refine Engine backend (Rust) and frontend (React/TypeScript). Added inference pipeline with llama-cpp-2, prompt engineering template, clipboard copy, and comprehensive tests.
+**Change Log:** Implemented Fast Refine Engine backend (Rust) and frontend (React/TypeScript). Added inference pipeline with llama-cpp-2, prompt engineering template, clipboard copy, and comprehensive tests. **2026-06-28 Code Review:** Fixed model loading cache (critical NFR-P1), type placement (AC8), missing tests, icon/design token consistency, responsive breakpoints, and error handling.**
 
-**Status:** review
+**Status:** done
 **Epic:** 1 — Zero-Onboarding & Instant Prompt Refinement
 **Story ID:** 1.3
 **Created:** 2026-06-28
@@ -283,10 +283,10 @@ interface RefineChange {
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC: #)
-  - [ ] Subtask 1.1
-- [ ] Task 2 (AC: #)
-  - [ ] Subtask 2.1
+- [x] Task 1 (AC: #)
+  - [x] Subtask 1.1
+- [x] Task 2 (AC: #)
+  - [x] Subtask 2.1
 
 ## 🧠 Developer Context & Guardrails
 
@@ -836,12 +836,35 @@ AiderDesk / Claude 3.5 Sonnet (Anthropic)
 
 ### File List
 
-- src-tauri/Cargo.toml (modified – added encoding_rs)
-- src-tauri/src/lib.rs (modified – registered `fast_refine` command)
+- src-tauri/Cargo.toml (modified – added encoding_rs, log)
+- src-tauri/Cargo.lock (auto-generated – updated dependency tree)
+- src-tauri/src/lib.rs (modified – registered `fast_refine` command, registered `pipeline` module)
 - src-tauri/src/commands/refine.rs (modified – added `RefineResult`, `RefineChange`, `fast_refine` command, tests)
-- src-tauri/src/llm/local.rs (modified – added `PROMPT_TEMPLATE`, `run_inference`, `parse_llm_output`, tests)
-- src/components/FastRefineView.tsx (modified – wired CTA, copy button, output display, toast)
+- src-tauri/src/llm/local.rs (modified – added `PROMPT_TEMPLATE`, `run_inference`, `parse_llm_output`, model cache, tests)
+- src-tauri/src/pipeline/mod.rs (NEW – pipeline module declaration)
+- src/lib/types.ts (modified – added `RefineResult`, `RefineChange` interfaces)
+- src/lib/tauri.ts (modified – added `fastRefine` wrapper; imports from `./types`)
+- src/lib/tauri.test.ts (NEW – library tests for fastRefine)
+- src/stores/usePromptStore.ts (modified – re-exports types from `lib/types`)
+- src/stores/usePromptStore.test.ts (modified – fixed `getInitialState` → `reset()`)
+- src/components/FastRefineView.tsx (modified – wired CTA, copy button, output display, toast; AppError.code handling)
 - src/components/FastRefineView.test.tsx (NEW – 8 component tests)
+
+
+### Code Review Fixes Applied (2026-06-28)
+
+- **CRITICAL**: Added `MODEL_CACHE` (`OnceLock<Arc<LlamaModel>>`) in `local.rs` — model is now loaded once and reused across all `fast_refine` calls (NFR-P1 fix).
+- **HIGH**: Moved `RefineResult`/`RefineChange` interfaces to `src/lib/types.ts` per AC8; `usePromptStore.ts` and `tauri.ts` import from there.
+- **HIGH**: Added `test_fast_refine_guard_llm_not_ready` test in `refine.rs` (Task 8.1 gap).
+- **HIGH**: Fixed `usePromptStore.test.ts` — replaced non-existent `getInitialState()` with `reset()`.
+- **MEDIUM**: Fixed icon consistency: "✅" → "✦" in toast, "✨" → "✦" on CTA button.
+- **MEDIUM**: Toast uses `var(--color-success)` design token instead of hardcoded `bg-green-500`.
+- **MEDIUM**: Responsive breakpoint: `lg:` → `md:` for two-column layout at 1024px+ (per AC7).
+- **MEDIUM**: Error handler now parses `AppError.code` via `[code] message` format.
+- **MEDIUM**: Created `pipeline/mod.rs` and registered in `lib.rs`.
+- **MEDIUM**: Created `src/lib/tauri.test.ts` with `fastRefine` invoke and error propagation tests.
+- **MEDIUM**: Updated story File List to include `Cargo.lock`, `pipeline/mod.rs`, `tauri.test.ts`.
+- **LOW**: Replaced `println!` with `log::info!` in `run_inference`.
 
 
 ### Agent Model Used

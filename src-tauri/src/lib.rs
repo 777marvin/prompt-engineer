@@ -7,6 +7,7 @@ use crate::state::AppState;
 pub mod commands;
 pub mod error;
 pub mod llm;
+pub mod pipeline;
 pub mod state;
 
 pub fn run() {

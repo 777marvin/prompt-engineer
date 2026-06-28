@@ -3,7 +3,7 @@ import usePromptStore from "./usePromptStore";
 
 describe("usePromptStore", () => {
   beforeEach(() => {
-    usePromptStore.setState(usePromptStore.getInitialState());
+    usePromptStore.getState().reset();
   });
 
   it("initializes with empty input", () => {

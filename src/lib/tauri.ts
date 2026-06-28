@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { RefineResult } from "../stores/usePromptStore";
+import type { RefineResult } from "./types";
 
 /**
  * Typed Tauri invoke wrapper.

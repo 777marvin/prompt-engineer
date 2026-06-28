@@ -1,16 +1,7 @@
 import { create } from "zustand";
+import type { RefineResult, RefineChange } from "../lib/types";
 
-export interface RefineResult {
-  original: string;
-  refined: string;
-  changes: RefineChange[];
-}
-
-export interface RefineChange {
-  type: "added" | "removed" | "modified";
-  text: string;
-  reason: string;
-}
+export type { RefineResult, RefineChange };
 
 export interface DissectorState {
   role: string | null;

@@ -159,17 +159,34 @@ fn get_backend() -> &'static LlamaBackend {
     })
 }
 
+/// Cache the loaded LlamaModel so it is loaded only once, not on every inference call.
+/// Critical for NFR-P1 (<500ms per Fast Refine request).
+/// Uses `OnceLock<Result<Arc<LlamaModel>, String>>` for stable-Rust compatibility.
+static MODEL_CACHE: OnceLock<Result<Arc<LlamaModel>, String>> = OnceLock::new();
+
+fn get_or_load_model(model_path: &Path) -> Result<Arc<LlamaModel>, AppError> {
+    let result = MODEL_CACHE.get_or_init(|| {
+        let backend = get_backend();
+        match LlamaModel::load_from_file(
+            backend,
+            model_path,
+            &LlamaModelParams::default(),
+        ) {
+            Ok(model) => Ok(Arc::new(model)),
+            Err(e) => Err(format!("model load failed: {}", e)),
+        }
+    });
+    match result {
+        Ok(model) => Ok(Arc::clone(model)),
+        Err(e) => Err(AppError::LlmInferenceFailed(e.clone())),
+    }
+}
+
 pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppError> {
     let start = Instant::now();
 
     let backend = get_backend();
-
-    // Load model
-    let model = LlamaModel::load_from_file(
-        backend,
-        model_path,
-        &LlamaModelParams::default(),
-    ).map_err(|e| AppError::LlmInferenceFailed(format!("model load failed: {}", e)))?;
+    let model = get_or_load_model(model_path)?;
 
     // Create context
     let mut ctx = model.new_context(
@@ -235,7 +252,7 @@ pub fn run_inference(model_path: &Path, user_input: &str) -> Result<String, AppE
     }
 
     let elapsed = start.elapsed();
-    println!("[FastRefine] Inference completed in {:?}", elapsed);
+    log::info!("[FastRefine] Inference completed in {:?}", elapsed);
 
     Ok(output)
 }

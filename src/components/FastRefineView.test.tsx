@@ -26,12 +26,12 @@ beforeEach(() => {
 });
 
 describe("FastRefineView", () => {
-  it('renders CTA button with "✨ Discover Your Prompt" when model is ready', async () => {
+  it('renders CTA button with "✦ Discover Your Prompt" when model is ready', async () => {
     await act(async () => {
       render(<FastRefineView />);
     });
     const btn = screen.getByRole("button", {
-      name: /✨ Discover Your Prompt/i,
+      name: /✦ Discover Your Prompt/i,
     });
     expect(btn).toBeInTheDocument();
     expect(btn).not.toBeDisabled();
@@ -73,7 +73,7 @@ describe("FastRefineView", () => {
       render(<FastRefineView />);
     });
 
-    const btn = screen.getByRole("button", { name: /✨ Discover Your Prompt/i });
+    const btn = screen.getByRole("button", { name: /✦ Discover Your Prompt/i });
     await act(async () => {
       fireEvent.click(btn);
     });
@@ -86,7 +86,7 @@ describe("FastRefineView", () => {
       render(<FastRefineView />);
     });
 
-    const btn = screen.getByRole("button", { name: /✨ Discover Your Prompt/i });
+    const btn = screen.getByRole("button", { name: /✦ Discover Your Prompt/i });
     await act(async () => {
       fireEvent.click(btn);
     });

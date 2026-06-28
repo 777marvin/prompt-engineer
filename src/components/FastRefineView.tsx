@@ -49,9 +49,10 @@ function FastRefineView() {
       const result = await fastRefine(input);
       setOutput(result);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unexpected error occurred";
-      showToast(errorMessage);
+      const appErr = err as { code?: string; message?: string };
+      const code = appErr?.code ?? "UNKNOWN";
+      const message = appErr?.message ?? (err instanceof Error ? err.message : "An unexpected error occurred");
+      showToast(`[${code}] ${message}`);
     } finally {
       setIsRefining(false);
     }
@@ -61,7 +62,7 @@ function FastRefineView() {
     if (!output) return;
     try {
       await navigator.clipboard.writeText(output.refined);
-      showToast("✅ Copied!");
+      showToast("✦ Copied!");
     } catch {
       showToast("Copy manually - clipboard access denied");
     }
@@ -92,7 +93,7 @@ function FastRefineView() {
       if (isRefining) {
         buttonText = "Refining...";
       } else {
-        buttonText = "✨ Discover Your Prompt";
+        buttonText = "✦ Discover Your Prompt";
       }
       break;
   }
@@ -112,9 +113,9 @@ function FastRefineView() {
       <ChipNavigationBar />
 
       {/* Responsive grid container */}
-      <div className="flex-1 flex flex-col px-4 max-w-6xl mx-auto w-full lg:grid lg:grid-cols-2 lg:gap-6 pb-8">
+      <div className="flex-1 flex flex-col px-4 max-w-6xl mx-auto w-full md:grid md:grid-cols-2 md:gap-6 pb-8">
         {/* Left column – Input */}
-        <div className="flex flex-col items-center w-full lg:items-stretch">
+        <div className="flex flex-col items-center w-full md:items-stretch">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -170,7 +171,7 @@ function FastRefineView() {
         </div>
 
         {/* Right column – Output */}
-        <div className="mt-6 lg:mt-0">
+        <div className="mt-6 md:mt-0">
           {output && (
             <div className="relative bg-white rounded-2xl border-t-4 border-[var(--color-accent-primary)] shadow-md p-6">
               <div className="font-mono text-sm whitespace-pre-wrap break-words text-gray-800">
@@ -198,7 +199,7 @@ function FastRefineView() {
                 exit={{ opacity: 0 }}
                 role="status"
                 aria-live="polite"
-                className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50"
+                className="fixed bottom-6 right-6 bg-[var(--color-success)] text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50"
               >
                 {toastMessage}
               </motion.div>

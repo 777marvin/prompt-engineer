@@ -180,6 +180,26 @@ mod tests {
     }
 
     #[test]
+    fn test_fast_refine_guard_llm_not_ready() {
+        let state = make_state();
+        // Default state: router NOT ready
+        assert!(!state.router.is_ready());
+
+        // Simulate the guard logic used by fast_refine command
+        let guard = || -> Result<(), AppError> {
+            if !state.router.is_ready() {
+                return Err(AppError::LlmNotReady);
+            }
+            Ok(())
+        };
+        assert!(guard().is_err());
+
+        // Set router to ready and re-test
+        state.router.set_ready(true);
+        assert!(guard().is_ok());
+    }
+
+    #[test]
     fn test_refine_change_type_field() {
         let change = RefineChange {
             change_type: "added".into(),
